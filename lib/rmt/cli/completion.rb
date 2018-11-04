@@ -1,4 +1,6 @@
 class RMT::CLI::Completion
+  @@dynamic_commands = %W(enable disable export import attach detach remove)
+
   @cli_words = []
   @current_word = ''
   @previous_word = ''
@@ -20,19 +22,42 @@ class RMT::CLI::Completion
     @cli_words.join == @cli_words.join.downcase
   end
 
-  def static_completion_possible?(index = 1)
-    if index > 3
-      return false
-    elsif index >= @cli_words.length - 1
+  def static_completion_possible?(index: 1, words: @cli_words[0..@cli_words.length - 2])
+
+    if words.length < 3
       return true
-    else
-      word_to_verify = @cli_words[index]
-      previous_word = @cli_words[index - 1]
-      if generate_static_options(previous_word).include? word_to_verify
-        return static_completion_possible?(index + 1)
-      end
     end
+
+    sub_command = words[index]
+    super_command = words[index - 1]
+
+    if words.length == index
+      return true
+    end
+
+    if generate_static_options(super_command).include? sub_command
+      return static_completion_possible?(index: index + 1, words: words)
+    end
+
     return false
+  end
+
+  def dynamic_completion_possible?
+
+    dynamic_identifier = @cli_words & @@dynamic_commands
+
+    if dynamic_identifier.length != 1
+      return false
+    end
+
+    dynamic_identifier = dynamic_identifier[0]
+    index = @cli_words.find_index(dynamic_identifier)
+
+    if !static_completion_possible?(index: 1, words: @cli_words[0..index])
+      return false
+    end
+
+    return true
   end
 
   def determine_current_word

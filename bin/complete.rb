@@ -14,6 +14,7 @@ ActiveSupport::Dependencies.autoload_paths += relative_load_paths
 completion = RMT::CLI::Completion.new
 
 if !completion.correct_capitalization? then exit 0 end
+if completion.dynamic_completion_possible? then STDERR.puts "DYNAMIC!" end
 if !completion.static_completion_possible? then exit 0 end
 
 completion.generate_completions

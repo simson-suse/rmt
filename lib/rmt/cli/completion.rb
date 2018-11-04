@@ -35,7 +35,7 @@ class RMT::CLI::Completion
       return true
     end
 
-    if generate_static_options(super_command).include? sub_command
+    if generate_static_options(command: super_command).include? sub_command
       return static_completion_possible?(index: index + 1, words: words)
     end
 
@@ -72,16 +72,16 @@ class RMT::CLI::Completion
     end
   end
 
-  def generate_static_options(previous_word)
-    submodule = previous_word.slice(0,1).capitalize + previous_word.slice(1, previous_word.length).downcase
+  def generate_static_options(command: @previous_word)
+    submodule = command.slice(0, 1).capitalize + command.slice(1, command.length).downcase
     options = []
 
     # exceptions:
-    if previous_word == 'rmt-cli' || previous_word =='help' then submodule = 'Main' end
-    if previous_word == 'repo' then submodule = 'Repos' end
-    if previous_word == 'product' then submodule = 'Products' end
-    if previous_word == 'custom' then submodule = 'ReposCustom' end
-    if previous_word == 'rmt-cli' then options.append('help') end
+    if command == 'rmt-cli' || command =='help' then submodule = 'Main' end
+    if command == 'repo' then submodule = 'Repos' end
+    if command == 'product' then submodule = 'Products' end
+    if command == 'custom' then submodule = 'ReposCustom' end
+    if command == 'rmt-cli' then options.append('help') end
 
     begin
       options.concat RMT::CLI.module_eval(submodule).commands.keys
@@ -91,9 +91,43 @@ class RMT::CLI::Completion
     return options
   end
 
+  def generate_dynamic_options
+    require 'active_record'
+    require_relative '../../../app/models/application_record'
+    db_config = RMT::Config.db_config
+    ActiveRecord::Base.establish_connection(db_config)
+
+    dynamic_identifier = (@cli_words & @@dynamic_commands)[0]
+
+    case dynamic_identifier
+
+    when 'enable', 'disable'
+      super_command = @cli_words[1]
+      custom = (@cli_words[2] == 'custom')
+
+      list_of_(what: super_command, enabled_or_disabled: dynamic_identifier, custom: custom)
+
+    when 'export', 'import'
+      if @cli_words.length = 3
+        generate_static_options
+      elsif @cli_words.length = 4
+        puts "PATH"
+      end
+
+    when 'attach'
+
+    when 'detach'
+
+    when 'remove'
+
+
+    end
+  end
+
   def generate_completions
     completions = []
-    static_options = generate_static_options(@previous_word)
+    static_options = generate_static_options
+    dynamic_options = generate_dynamic_options
 
     static_options.each do |option|
       if option.start_with?(@current_word)
@@ -102,6 +136,17 @@ class RMT::CLI::Completion
     end
 
     return completions
+  end
+
+  def list_of_(what: nil, enabled_or_disabled: nil, custom: false)
+    case what
+    when 'products'
+      require_relative '../../../app/models/product'
+      products = RMT::CLI::Products
+      require 'pry'
+      binding.pry
+    when 'repos'
+    end
   end
 
   def complete
